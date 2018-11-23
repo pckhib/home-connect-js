@@ -1,0 +1,12 @@
+{
+  "name": "home-connect-js",
+  "version": "0.0.1",
+  "main": "main.js",
+  "repository": "https://github.com/pckhib/home-connect-js.git",
+  "author": "pckhib <patrickhieber92@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "request": "^2.88.0",
+    "swagger-client": "^3.8.22"
+  }
+}
