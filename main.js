@@ -1,3 +1,4 @@
+const EventSource = require('eventsource');
 const utils = require('./lib/utils');
 
 class HomeConnect {
@@ -5,6 +6,7 @@ class HomeConnect {
     constructor(clientId, clientSecret) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.eventSources = {};
     }
 
     init(options) {
@@ -31,6 +33,28 @@ class HomeConnect {
             this.client = await utils.getClient(this.tokens.access_token);
         }
         return this.client.apis[tag][operationId]({ ...haid, ...body });
+    }
+
+    subscribe(haid, event, cb) {
+        if (this.eventSources && !(haid in this.eventSources)) {
+            let url = isSimulated ? urls.simulation.base : urls.physical.base;
+            const es = new EventSource(url + 'api/homeappliances/' + haid + '/events', {
+                headers: {
+                    accept: 'text/event-stream',
+                    authorization: 'Bearer ' + this.tokens.access_token
+                }
+            });
+
+            this.eventSources = { ...this.eventSources, [haid]: es };
+        }
+
+        this.eventSources[haid].addEventListener(event, cb);
+    }
+
+    unsubscribe(haid, event, cb) {
+        if (this.eventSources && haid in this.eventSources) {
+            this.eventSources[haid].removeEventListener(event, cb);
+        }
     }
 }
 

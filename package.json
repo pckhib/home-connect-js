@@ -6,6 +6,7 @@
   "author": "pckhib <patrickhieber92@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "eventsource": "^1.0.7",
     "express": "^4.16.4",
     "opn": "^5.4.0",
     "request": "^2.88.0",
