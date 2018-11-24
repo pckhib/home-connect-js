@@ -32,7 +32,7 @@ class HomeConnect {
             this.tokens = await utils.refreshToken(this.clientSecret, this.tokens.refresh_token);
             this.client = await utils.getClient(this.tokens.access_token);
         }
-        return this.client.apis[tag][operationId]({ ...haid, ...body });
+        return this.client.apis[tag][operationId]({ haid, body });
     }
 
     subscribe(haid, event, cb) {
