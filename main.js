@@ -7,7 +7,11 @@ class HomeConnect {
         this.clientSecret = clientSecret;
     }
 
-    init() {
+    init(options) {
+        global.isSimulated = (options != undefined
+            && 'isSimulated' in options
+            && typeof options.isSimulated === 'boolean') ? options.isSimulated : false;
+
         return new Promise((resolve, reject) => {
             return utils.authorize(this.clientId, this.clientSecret)
             .then(tokens => {
@@ -29,3 +33,5 @@ class HomeConnect {
         return this.client.apis[tag][operationId]({ ...haid, ...body });
     }
 }
+
+module.exports = HomeConnect;

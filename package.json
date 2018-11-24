@@ -6,6 +6,8 @@
   "author": "pckhib <patrickhieber92@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "express": "^4.16.4",
+    "opn": "^5.4.0",
     "request": "^2.88.0",
     "swagger-client": "^3.8.22"
   }
