@@ -33,10 +33,63 @@ hc.init({
         console.log(result);
     });
 
-    // Subscribe for events for specific appliance
+    // Subscribe for events from specific appliance
     hc.subscribe(/* haid */, 'NOTIFY', callback);
     
     // Unsubscribe for events for specific appliance
     hc.unsubscribe(/* haid */, 'NOTIFY', callback);
 });
 ```
+
+## API
+```js
+// Make an API call
+hc.command(tag, operationId, haid /* optional */, body /* optional */);
+
+// Subscribe for events from specific appliance
+hc.subscribe(haid, event, callback);
+
+// Unsubscribe for events
+hc.unsubscribe(haid, event, callback);
+```
+For the command request, the following tags and operationIds are available.
+<details><summary>Available commands</summary>
+<p>
+
+```
+{ default:
+   { get_home_appliances: [Function],
+     get_specific_appliance: [Function] },
+  programs:
+   { get_active_program: [Function],
+     start_program: [Function],
+     stop_program: [Function],
+     get_active_program_options: [Function],
+     set_active_program_options: [Function],
+     get_active_program_option: [Function],
+     set_active_program_option: [Function],
+     get_selected_program: [Function],
+     set_selected_program: [Function],
+     get_selected_program_options: [Function],
+     set_selected_program_options: [Function],
+     get_selected_program_option: [Function],
+     set_selected_program_option: [Function],
+     get_available_programs: [Function],
+     get_available_program: [Function] },
+  images: { get_images: [Function], get_image: [Function] },
+  settings:
+   { get_settings: [Function],
+     get_setting: [Function],
+     set_setting: [Function] },
+  status_events:
+   { get_status: [Function],
+     get_status_value: [Function] }
+}
+```
+
+</p>
+</details>
+
+More information about each function is available in the API documentation: https://apiclient.home-connect.com/
+
+For the available events checkout the official documentation: https://developer.home-connect.com/docs/monitoring/availabilitymatrix
