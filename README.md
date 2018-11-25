@@ -20,7 +20,7 @@ npm install home-connect-js
 
 ## Usage
 ```js
-const HomeConnect = require('./main');
+const HomeConnect = require('./home-connect-js');
 
 const hc = new HomeConnect(/* client id */, /* client secret */);
 hc.init({
