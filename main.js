@@ -3,9 +3,10 @@ const utils = require('./lib/utils');
 
 class HomeConnect {
 
-    constructor(clientId, clientSecret) {
+    constructor(clientId, clientSecret, refreshToken) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.refreshToken = refreshToken;
         this.eventSources = {};
     }
 
@@ -15,6 +16,17 @@ class HomeConnect {
             && typeof options.isSimulated === 'boolean') ? options.isSimulated : false;
 
         return new Promise((resolve, reject) => {
+
+          if(this.refreshToken){
+            return utils.refreshToken(this.clientSecret, this.refreshToken).then(tokens => {
+                this.tokens = tokens;
+                return utils.getClient(this.tokens.access_token);
+            })
+            .then(client => {
+                this.client = client;
+                resolve();
+            });
+          }else{
             return utils.authorize(this.clientId, this.clientSecret)
             .then(tokens => {
                 this.tokens = tokens;
@@ -24,6 +36,7 @@ class HomeConnect {
                 this.client = client;
                 resolve();
             });
+          }
         });
     }
 
