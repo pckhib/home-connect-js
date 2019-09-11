@@ -1,13 +1,14 @@
 const EventSource = require('eventsource');
 const utils = require('./lib/utils');
+const EventEmitter = require('events');
 
-class HomeConnect {
-
+class HomeConnect extends EventEmitter {
     constructor(clientId, clientSecret, refreshToken) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.refreshToken = refreshToken;
-        this.eventSources = {};
+      super()
+      this.clientId = clientId;
+      this.clientSecret = clientSecret;
+      this.refreshToken = refreshToken;
+      this.eventSources = {};
     }
 
     init(options) {
@@ -20,6 +21,7 @@ class HomeConnect {
           if(this.refreshToken){
             return utils.refreshToken(this.clientSecret, this.refreshToken).then(tokens => {
                 this.tokens = tokens;
+                this.emit("newRefreshToken", tokens.refresh_token);
                 return utils.getClient(this.tokens.access_token);
             })
             .then(client => {
@@ -30,6 +32,7 @@ class HomeConnect {
             return utils.authorize(this.clientId, this.clientSecret)
             .then(tokens => {
                 this.tokens = tokens;
+                this.emit("newRefreshToken", tokens.refresh_token);
                 return utils.getClient(this.tokens.access_token);
             })
             .then(client => {
@@ -43,6 +46,7 @@ class HomeConnect {
     async command(tag, operationId, haid, body) {
         if (Date.now() > (this.tokens.timestamp + this.tokens.expires_in)) {
             this.tokens = await utils.refreshToken(this.clientSecret, this.tokens.refresh_token);
+            this.emit("newRefreshToken", tokens.refresh_token);
             this.client = await utils.getClient(this.tokens.access_token);
         }
         return this.client.apis[tag][operationId]({ haid, body });
