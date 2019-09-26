@@ -19,17 +19,7 @@ class HomeConnect extends EventEmitter {
         return new Promise((resolve, reject) => {
 
           if(this.refreshToken){
-            return utils.refreshToken(this.clientSecret, this.refreshToken).then(tokens => {
-                this.tokens = tokens;
-                this.emit("newRefreshToken", tokens.refresh_token);
-                return utils.getClient(this.tokens.access_token);
-            })
-            .then(client => {
-                this.client = client;
-                resolve();
-            });
-          }else{
-            return utils.authorize(this.clientId, this.clientSecret)
+            utils.refreshToken(this.clientSecret, this.refreshToken)
             .then(tokens => {
                 this.tokens = tokens;
                 this.emit("newRefreshToken", tokens.refresh_token);
@@ -38,7 +28,18 @@ class HomeConnect extends EventEmitter {
             .then(client => {
                 this.client = client;
                 resolve();
-            });
+            }).catch(reject);
+          }else{
+            utils.authorize(this.clientId, this.clientSecret)
+            .then(tokens => {
+                this.tokens = tokens;
+                this.emit("newRefreshToken", tokens.refresh_token);
+                return utils.getClient(this.tokens.access_token);
+            })
+            .then(client => {
+                this.client = client;
+                resolve();
+            }).catch(reject);
           }
         });
     }
