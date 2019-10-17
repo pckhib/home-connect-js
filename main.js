@@ -7,7 +7,8 @@ class HomeConnect extends EventEmitter {
       super()
       this.clientId = clientId;
       this.clientSecret = clientSecret;
-      this.refreshToken = refreshToken;
+      this.tokens = {}
+      this.tokens.refresh_token = refreshToken;
       this.eventSources = {};
     }
 
@@ -18,8 +19,8 @@ class HomeConnect extends EventEmitter {
 
         return new Promise((resolve, reject) => {
 
-          if(this.refreshToken){
-            utils.refreshToken(this.clientSecret, this.refreshToken)
+          if(this.tokens.refresh_token){
+            utils.refreshToken(this.clientSecret, this.tokens.refresh_token)
             .then(tokens => {
                 this.tokens = tokens;
                 this.emit("newRefreshToken", tokens.refresh_token);
