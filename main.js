@@ -46,7 +46,7 @@ class HomeConnect extends EventEmitter {
     }
 
     async command(tag, operationId, haid, body) {
-        if (Date.now() > (this.tokens.timestamp + this.tokens.expires_in)) {
+        if (Math.floor(Date.now()/1000) > (this.tokens.timestamp + this.tokens.expires_in)) {
             this.tokens = await utils.refreshToken(this.clientSecret, this.tokens.refresh_token);
             this.emit("newRefreshToken", this.tokens.refresh_token);
             this.client = await utils.getClient(this.tokens.access_token);
