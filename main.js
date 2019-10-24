@@ -10,69 +10,114 @@ class HomeConnect extends EventEmitter {
       this.tokens = {}
       this.tokens.refresh_token = refreshToken;
       this.eventSources = {};
+      this.eventListeners = {};
+      this.tokenRefreshTimeout = null
     }
 
-    init(options) {
+    async init(options) {
         global.isSimulated = (options != undefined
             && 'isSimulated' in options
             && typeof options.isSimulated === 'boolean') ? options.isSimulated : false;
 
-        return new Promise((resolve, reject) => {
+        try {
+            // refresh tokens or authorize app
+            this.tokens = await (this.tokens.refresh_token ?
+                utils.refreshToken(this.clientSecret, this.tokens.refresh_token)
+                :
+                utils.authorize(this.clientId, this.clientSecret))
 
-          if(this.tokens.refresh_token){
-            utils.refreshToken(this.clientSecret, this.tokens.refresh_token)
-            .then(tokens => {
-                this.tokens = tokens;
-                this.emit("newRefreshToken", tokens.refresh_token);
-                return utils.getClient(this.tokens.access_token);
-            })
-            .then(client => {
-                this.client = client;
-                resolve();
-            }).catch(reject);
-          }else{
-            utils.authorize(this.clientId, this.clientSecret)
-            .then(tokens => {
-                this.tokens = tokens;
-                this.emit("newRefreshToken", tokens.refresh_token);
-                return utils.getClient(this.tokens.access_token);
-            })
-            .then(client => {
-                this.client = client;
-                resolve();
-            }).catch(reject);
-          }
-        });
+            // schendule token refresh
+            if (!this.tokenRefreshTimeout) {
+                const timeToExpire = (this.tokens.timestamp + this.tokens.expires_in / 2) - Math.floor(Date.now() / 1000)
+                this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToExpire * 1000)
+            }
+    
+            this.emit("newRefreshToken", this.tokens.refresh_token);
+            this.client = await utils.getClient(this.tokens.access_token);
+        } catch (error) {
+            throw error
+        }
     }
 
     async command(tag, operationId, haid, body) {
-        if (Math.floor(Date.now()/1000) > (this.tokens.timestamp + this.tokens.expires_in)) {
-            this.tokens = await utils.refreshToken(this.clientSecret, this.tokens.refresh_token);
-            this.emit("newRefreshToken", this.tokens.refresh_token);
-            this.client = await utils.getClient(this.tokens.access_token);
+        try {
+            await this.refreshTokens()
+            return this.client.apis[tag][operationId]({ haid, body })
+        } catch (error) {
+            throw error
         }
-        return this.client.apis[tag][operationId]({ haid, body });
     }
 
-    subscribe(haid, event, cb) {
+    subscribe(haid, event, callback) {
         if (this.eventSources && !(haid in this.eventSources)) {
-            let url = isSimulated ? urls.simulation.base : urls.physical.base;
-            const es = new EventSource(url + 'api/homeappliances/' + haid + '/events', {
+            const url = isSimulated ? urls.simulation.base : urls.physical.base;
+            const eventSource = new EventSource(url + 'api/homeappliances/' + haid + '/events', {
                 headers: {
                     accept: 'text/event-stream',
                     authorization: 'Bearer ' + this.tokens.access_token
                 }
             });
-
-            this.eventSources = { ...this.eventSources, [haid]: es };
+            this.eventSources = { ...this.eventSources, [haid]: eventSource };
         }
 
-        this.eventSources[haid].addEventListener(event, cb);
+        if (this.eventListeners && !(haid in this.eventListeners)) {
+            const listeners = new Map()
+            listeners.set(event, callback)
+            this.eventListeners = { ...this.eventListeners, [haid]: listeners }
+        }
+
+        this.eventSources[haid].addEventListener(event, callback);
+        this.eventListeners[haid].set(event, callback)
     }
 
-    unsubscribe(haid, event, cb) {
+    unsubscribe(haid, event, callback) {
         if (this.eventSources && haid in this.eventSources) {
-            this.eventSources[haid].removeEventListener(event, cb);
+            this.eventSources[haid].removeEventListener(event, callback);
+        }
+        if (this.eventListeners && haid in this.eventListeners) {
+            this.eventListeners[haid].delete(event)
+        }
+    }
+
+    async refreshTokens(){
+            if (Math.floor(Date.now()/1000) > (this.tokens.timestamp + this.tokens.expires_in)) {
+                try {
+                    this.tokens = await utils.refreshToken(this.clientSecret, this.tokens.refresh_token);
+                    this.emit("newRefreshToken", this.tokens.refresh_token);
+                    this.client = await utils.getClient(this.tokens.access_token);
+                    this.recreateEventSources()
+                } catch (event) {
+                    throw event
+                }
+            }
+            // schendule token refresh
+            const timeToExpire = (this.tokens.timestamp + this.tokens.expires_in / 2) - Math.floor(Date.now() / 1000)
+            this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToExpire * 1000)
+    }
+
+    recreateEventSources() {
+        for (const haid of Object.keys(this.eventSources)) {
+            // close EventSourve
+            this.eventSources[haid].close()
+            // remove all EventListeners from EventSource
+            for (const [ event, callback ] of this.eventListeners[haid]) {
+                this.eventSources[haid].removeEventListener(event, callback)
+            }
+            // create new EventSource with current acces_token
+            const url = isSimulated ? urls.simulation.base : urls.physical.base;
+            this.eventSources[haid] = new EventSource(
+                url + 'api/homeappliances/' + haid + '/events',
+                {
+                    headers: {
+                        accept: 'text/event-stream',
+                        authorization: 'Bearer ' + this.tokens.access_token
+                    }
+                }
+            )
+            // aply old EventListeners
+            for (const [ event, callback ] of this.eventListeners[haid]) {
+                this.eventSources[haid].addEventListener(event, callback)
+            }
         }
     }
 }
