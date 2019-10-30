@@ -26,11 +26,10 @@ class HomeConnect extends EventEmitter {
                 :
                 utils.authorize(this.clientId, this.clientSecret))
 
-            // schendule token refresh
-            if (!this.tokenRefreshTimeout) {
-                const timeToExpire = (this.tokens.timestamp + this.tokens.expires_in * 0.9) - Math.floor(Date.now() / 1000)
-                this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToExpire * 1000)
-            }
+            // schedule token refresh
+            clearTimeout(this.tokenRefreshTimeout)
+            const timeToNextTokenRefresh = (this.tokens.timestamp + this.tokens.expires_in * 0.9) - Math.floor(Date.now() / 1000)
+            this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToNextTokenRefresh * 1000)
     
             this.emit("newRefreshToken", this.tokens.refresh_token);
             this.client = await utils.getClient(this.tokens.access_token);
@@ -87,11 +86,12 @@ class HomeConnect extends EventEmitter {
             this.client = await utils.getClient(this.tokens.access_token);
             this.recreateEventSources()
             timeToNextTokenRefresh = (this.tokens.timestamp + this.tokens.expires_in * 0.9) - Math.floor(Date.now() / 1000)
-        } catch (event) {
+        } catch (error) {
             timeToNextTokenRefresh = 60
-            throw event
+            console.error("Could not refresh tokens: " + error.message)
+            console.error("Retrying in 60 seconds")
         }
-        // schendule token refresh
+        // schedule token refresh
         this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToNextTokenRefresh * 1000)
     }
 
