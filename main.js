@@ -28,7 +28,7 @@ class HomeConnect extends EventEmitter {
 
             // schendule token refresh
             if (!this.tokenRefreshTimeout) {
-                const timeToExpire = (this.tokens.timestamp + this.tokens.expires_in / 2) - Math.floor(Date.now() / 1000)
+                const timeToExpire = (this.tokens.timestamp + this.tokens.expires_in * 0.9) - Math.floor(Date.now() / 1000)
                 this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToExpire * 1000)
             }
     
@@ -41,7 +41,6 @@ class HomeConnect extends EventEmitter {
 
     async command(tag, operationId, haid, body) {
         try {
-            await this.refreshTokens()
             return this.client.apis[tag][operationId]({ haid, body })
         } catch (error) {
             throw error
@@ -80,19 +79,20 @@ class HomeConnect extends EventEmitter {
     }
 
     async refreshTokens(){
-            if (Math.floor(Date.now()/1000) > (this.tokens.timestamp + this.tokens.expires_in)) {
-                try {
-                    this.tokens = await utils.refreshToken(this.clientSecret, this.tokens.refresh_token);
-                    this.emit("newRefreshToken", this.tokens.refresh_token);
-                    this.client = await utils.getClient(this.tokens.access_token);
-                    this.recreateEventSources()
-                } catch (event) {
-                    throw event
-                }
-            }
-            // schendule token refresh
-            const timeToExpire = (this.tokens.timestamp + this.tokens.expires_in / 2) - Math.floor(Date.now() / 1000)
-            this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToExpire * 1000)
+        clearTimeout(this.tokenRefreshTimeout)
+        let timeToNextTokenRefresh
+        try {
+            this.tokens = await utils.refreshToken(this.clientSecret, this.tokens.refresh_token);
+            this.emit("newRefreshToken", this.tokens.refresh_token);
+            this.client = await utils.getClient(this.tokens.access_token);
+            this.recreateEventSources()
+            timeToNextTokenRefresh = (this.tokens.timestamp + this.tokens.expires_in * 0.9) - Math.floor(Date.now() / 1000)
+        } catch (event) {
+            timeToNextTokenRefresh = 60
+            throw event
+        }
+        // schendule token refresh
+        this.tokenRefreshTimeout = setTimeout(() => this.refreshTokens(), timeToNextTokenRefresh * 1000)
     }
 
     recreateEventSources() {
