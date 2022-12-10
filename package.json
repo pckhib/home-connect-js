@@ -7,7 +7,7 @@
   "license": "MIT",
   "dependencies": {
     "eventsource": "^1.0.7",
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "opn": "^5.4.0",
     "request": "^2.88.0",
     "swagger-client": "^3.8.22"
